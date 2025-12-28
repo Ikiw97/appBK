@@ -44,6 +44,12 @@ export default async function handler(
           akpd: data.settings.assessments?.akpd ?? DEFAULT_SETTINGS.assessments.akpd,
           aum: data.settings.assessments?.aum ?? DEFAULT_SETTINGS.assessments.aum,
           personality: data.settings.assessments?.personality ?? DEFAULT_SETTINGS.assessments.personality,
+          emotional_intelligence: data.settings.assessments?.emotional_intelligence ?? DEFAULT_SETTINGS.assessments.emotional_intelligence,
+          sdq: data.settings.assessments?.sdq ?? DEFAULT_SETTINGS.assessments.sdq,
+          mbti: data.settings.assessments?.mbti ?? DEFAULT_SETTINGS.assessments.mbti,
+          big_five: data.settings.assessments?.big_five ?? DEFAULT_SETTINGS.assessments.big_five,
+          grit: data.settings.assessments?.grit ?? DEFAULT_SETTINGS.assessments.grit,
+          holland_code: data.settings.assessments?.holland_code ?? DEFAULT_SETTINGS.assessments.holland_code,
         },
         exercises: {
           basic: data.settings.exercises?.basic ?? DEFAULT_SETTINGS.exercises.basic,
