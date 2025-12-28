@@ -33,7 +33,7 @@ export default function RoleAwareLayout({
   };
 
   // Check if user has admin privileges (teacher, admin, or super_admin)
-  const isAdminOrTeacher = user?.role === 'teacher' || user?.role === 'admin' || user?.role === 'super_admin';
+  const isAdminOrTeacher = user?.role === 'teacher' || user?.role === 'admin' || user?.isSuperAdmin;
   const showSidebarCurrent = showSidebar && isAdminOrTeacher;
   const [isMobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
