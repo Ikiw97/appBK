@@ -1,0 +1,333 @@
+import React, { useState, useEffect } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { AKPD_QUESTIONS, getAKPDQuestionsWithCustom, type AKPDQuestion } from '@/lib/akpdQuestions';
+import { calculateAKPDResult, AKPDResult } from '@/lib/akpdResultCalculator';
+import { submitAssessmentResult } from '@/lib/supabaseClient';
+import AKPDResultView from './AKPDResultView';
+import { generateClasses, type SchoolMode } from '@/lib/classHelper';
+
+interface AKPDAssessmentFormProps {
+  onBack: () => void;
+  schoolMode: SchoolMode;
+}
+
+interface FormData {
+  nama: string;
+  kelas: string;
+  jenisKelamin: string;
+  [key: string]: string;
+}
+
+export default function AKPDAssessmentForm({ onBack, schoolMode }: AKPDAssessmentFormProps) {
+  const [step, setStep] = useState<'info' | 'questions' | 'result'>('info');
+  const [formData, setFormData] = useState<FormData>({ nama: '', kelas: '', jenisKelamin: '' });
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [questionsLoading, setQuestionsLoading] = useState(true);
+  const [akpdResult, setAkpdResult] = useState<AKPDResult | null>(null);
+  const [questions, setQuestions] = useState<AKPDQuestion[]>([]);
+
+  const classOptions = generateClasses(schoolMode);
+  const currentQuestion = questions[currentQuestionIndex];
+  const progressPercentage = questions.length > 0 ? Math.round(((currentQuestionIndex + 1) / questions.length) * 100) : 0;
+
+  // Load questions with custom edits from localStorage
+  useEffect(() => {
+    const questionsWithCustom = getAKPDQuestionsWithCustom();
+    setQuestions(questionsWithCustom);
+    setQuestionsLoading(false);
+  }, []);
+
+  const handleInfoChange = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleStartQuestions = () => {
+    if (!formData.nama.trim() || !formData.kelas.trim() || !formData.jenisKelamin.trim()) {
+      alert('Mohon isi nama, kelas, dan jenis kelamin terlebih dahulu');
+      return;
+    }
+    setStep('questions');
+  };
+
+  const handleSelectAnswer = (answer: string) => {
+    setSelectedAnswer(answer);
+  };
+
+  const handleNextQuestion = () => {
+    if (selectedAnswer === null) {
+      alert('Pilih jawaban terlebih dahulu');
+      return;
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      [currentQuestion.id]: selectedAnswer,
+    }));
+
+    if (currentQuestionIndex < questions.length - 1) {
+      setCurrentQuestionIndex((prev) => prev + 1);
+      setSelectedAnswer(null);
+    } else {
+      handleSubmitAKPD();
+    }
+  };
+
+  const handlePreviousQuestion = () => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex((prev) => prev - 1);
+      setSelectedAnswer(formData[questions[currentQuestionIndex - 1].id] || null);
+    }
+  };
+
+  const handleSubmitAKPD = async () => {
+    setLoading(true);
+    try {
+      const result = calculateAKPDResult(
+        formData.nama as string,
+        formData.kelas as string,
+        formData.jenisKelamin as string,
+        formData,
+        questions
+      );
+      setAkpdResult(result);
+
+      // Save to Supabase
+      await submitAssessmentResult('akpd', formData, questions as any);
+      setStep('result');
+    } catch (error) {
+      console.error('Error submitting AKPD:', error);
+      alert('Terjadi kesalahan saat menyimpan hasil');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (step === 'result' && akpdResult) {
+    return <AKPDResultView result={akpdResult} onBack={onBack} />;
+  }
+
+  if (questionsLoading) {
+    return (
+      <div className="px-6 md:px-8 py-8 max-w-2xl mx-auto">
+        <div className="card p-8 text-center">
+          <p className="text-gray-600">Memuat pertanyaan...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (step === 'info') {
+    return (
+      <div className="px-6 md:px-8 py-8 max-w-2xl mx-auto">
+        <button
+          onClick={onBack}
+          className="flex items-center gap-2 text-blue-600 hover:text-blue-700 mb-8 font-medium"
+        >
+          <ChevronLeft size={20} />
+          Kembali
+        </button>
+
+        <div className="card p-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Angket Kebutuhan Peserta Didik (AKPD)</h1>
+          <p className="text-gray-600 mb-8">
+            Silakan isi data diri Anda terlebih dahulu sebelum mengisi angket
+          </p>
+
+          <div className="space-y-6">
+            <div>
+              <label className="block text-gray-700 font-medium mb-2">
+                Nama Lengkap
+              </label>
+              <input
+                type="text"
+                className="input-field"
+                placeholder="Masukkan nama lengkap"
+                value={formData.nama}
+                onChange={(e) => handleInfoChange('nama', e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="block text-gray-700 font-medium mb-2">
+                Kelas
+              </label>
+              <select
+                className="input-field"
+                value={formData.kelas}
+                onChange={(e) => handleInfoChange('kelas', e.target.value)}
+              >
+                <option value="">Pilih Kelas</option>
+                {classOptions.map((cls) => (
+                  <option key={cls.value} value={cls.value}>
+                    {cls.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-gray-700 font-medium mb-2">
+                Jenis Kelamin
+              </label>
+              <select
+                className="input-field"
+                value={formData.jenisKelamin}
+                onChange={(e) => handleInfoChange('jenisKelamin', e.target.value)}
+              >
+                <option value="">Pilih Jenis Kelamin</option>
+                <option value="L">Laki-laki</option>
+                <option value="P">Perempuan</option>
+              </select>
+            </div>
+
+            <button
+              onClick={handleStartQuestions}
+              className="btn-primary w-full py-3"
+            >
+              Mulai Asesmen
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (questions.length === 0) {
+    return (
+      <div className="px-6 md:px-8 py-8 max-w-2xl mx-auto">
+        <button
+          onClick={onBack}
+          className="flex items-center gap-2 text-blue-600 hover:text-blue-700 mb-8 font-medium"
+        >
+          <ChevronLeft size={20} />
+          Kembali
+        </button>
+
+        <div className="card p-8 text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            Tidak ada pertanyaan tersedia
+          </h2>
+          <p className="text-gray-600 mb-6">
+            Asesmen AKPD tidak memiliki pertanyaan. Hubungi administrator.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentQuestion) {
+    return (
+      <div className="px-6 md:px-8 py-8 max-w-2xl mx-auto">
+        <button
+          onClick={onBack}
+          className="flex items-center gap-2 text-blue-600 hover:text-blue-700 mb-8 font-medium"
+        >
+          <ChevronLeft size={20} />
+          Kembali
+        </button>
+
+        <div className="card p-8 text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            Pertanyaan tidak ditemukan
+          </h2>
+          <p className="text-gray-600 mb-6">
+            Terjadi kesalahan saat memuat pertanyaan.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="px-6 md:px-8 py-8 max-w-2xl mx-auto">
+      <button
+        onClick={onBack}
+        className="flex items-center gap-2 text-blue-600 hover:text-blue-700 mb-8 font-medium"
+      >
+        <ChevronLeft size={20} />
+        Kembali
+      </button>
+
+      <div className="card p-8">
+        {/* Progress Bar */}
+        <div className="mb-8">
+          <div className="flex justify-between items-center mb-2">
+            <h2 className="text-sm font-medium text-gray-700">
+              Pertanyaan {currentQuestionIndex + 1} dari {questions.length}
+            </h2>
+            <span className="text-sm font-bold text-blue-600">{progressPercentage}%</span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-3">
+            <div
+              className="bg-gradient-to-r from-blue-600 to-purple-600 h-3 rounded-full transition-all duration-300"
+              style={{ width: `${progressPercentage}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Current Question */}
+        <div className="mb-8">
+          <div className="mb-2 inline-block px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+            {currentQuestion.category}
+          </div>
+          <h3 className="text-xl font-semibold text-gray-900 mt-4 mb-6">
+            {currentQuestion.text}
+          </h3>
+
+          {/* Answer Options */}
+          <div className="space-y-3">
+            {['Ya', 'Tidak'].map((answer) => (
+              <button
+                key={answer}
+                onClick={() => handleSelectAnswer(answer)}
+                className={`w-full p-4 text-left rounded-lg border-2 transition-all ${
+                  selectedAnswer === answer
+                    ? 'border-blue-600 bg-blue-50 text-gray-900 font-medium'
+                    : 'border-gray-200 bg-white text-gray-700 hover:border-blue-300'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                      selectedAnswer === answer
+                        ? 'border-blue-600 bg-blue-600'
+                        : 'border-gray-300'
+                    }`}
+                  >
+                    {selectedAnswer === answer && (
+                      <div className="w-2 h-2 bg-white rounded-full" />
+                    )}
+                  </div>
+                  {answer}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Navigation Buttons */}
+        <div className="flex gap-4 mt-8">
+          <button
+            onClick={handlePreviousQuestion}
+            disabled={currentQuestionIndex === 0}
+            className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <ChevronLeft size={18} />
+            Sebelumnya
+          </button>
+
+          <button
+            onClick={handleNextQuestion}
+            disabled={loading}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Menyimpan...' : currentQuestionIndex === questions.length - 1 ? 'Selesai' : 'Berikutnya'}
+            <ChevronRight size={18} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
