@@ -218,9 +218,6 @@ export const TIU_ADVANCED_QUESTIONS: TestQuestion[] = [
         correctIndex: 0,
         explanation: '33.33% mendekati 1/3. 2568.6 / 3 = 856.2.',
         timeLimit: 60
-    },
-    {
-        timeLimit: 60
     }
 ];
 
