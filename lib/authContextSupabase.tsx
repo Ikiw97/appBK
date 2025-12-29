@@ -39,10 +39,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const initializeAuth = async () => {
       try {
-        // Retrieve session with a timeout safety to prevent infinite loading
+        console.log('🔄 Initializing auth...');
+
+        // Retrieve session with a timeout safety to prevent infinite loading (reduced to 5s)
         const sessionPromise = supabase.auth.getSession();
         const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Auth initialization timeout')), 10000)
+          setTimeout(() => reject(new Error('Auth initialization timeout')), 5000)
         );
 
         const result: any = await Promise.race([sessionPromise, timeoutPromise]);
@@ -51,8 +53,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (sessionError) throw sessionError;
 
         if (session?.user) {
+          console.log('✅ Session found, loading profile...');
           // Also wrap profile loading in a timeout race (separate 5s)
-          // We don't want to block the whole app if profile fetch is slow
           try {
             await Promise.race([
               loadUserProfile(session.user.id, session.user.email || ''),
@@ -71,9 +73,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
           }
           setSession(session);
+        } else {
+          console.log('ℹ️ No active session found');
         }
-      } catch (error) {
-        console.error('Error initializing auth:', error);
+      } catch (error: any) {
+        console.error('❌ Error initializing auth:', error);
+
+        // Critical Fix: If timeout or error occurs, force clear everything to prevent infinite loading
+        if (error.message === 'Auth initialization timeout' || error.message?.includes('timeout')) {
+          console.warn('⚠️ Auth timeout detected. Forcing session reset to fix stuck loading state.');
+
+          // 1. Force state to loaded (stops spinner)
+          setUser(null);
+          setSession(null);
+
+          // 2. Clear local storage items that might be corrupted
+          try {
+            const keyToRemove = Object.keys(localStorage).find(key => key.includes('supabase.auth.token'));
+            if (keyToRemove) {
+              console.log('🧹 Clearing potentially corrupted token:', keyToRemove);
+              localStorage.removeItem(keyToRemove);
+            }
+          } catch (e) {
+            console.error('Error clearing storage:', e);
+          }
+
+          // 3. Attempt forced sign out
+          try {
+            await supabase.auth.signOut();
+          } catch (e) {
+            // Ignore signout errors during recovery
+          }
+        }
       } finally {
         if (mounted) setLoading(false);
       }
