@@ -15,6 +15,7 @@ export interface AuthUser {
 interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
+  loadingMessage?: string;
   session: any;
   signUpWithEmail: (email: string, password: string, fullName: string) => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
@@ -32,6 +33,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingMessage, setLoadingMessage] = useState('Memuat sistem...');
 
   // Initialize auth state dari Supabase session
   useEffect(() => {
@@ -185,25 +187,87 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Helper for nuclear reset
+  const nuclearReset = async () => {
+    console.warn('⚠️ Performing nuclear reset...');
+
+    // 1. Force state to loaded (stops spinner)
+    setUser(null);
+    setSession(null);
+    setLoadingMessage('Cleaning up...');
+
+    // 2. Clear all storage
+    try {
+      console.log('☢️ CLEARING LOCAL & SESSION STORAGE');
+      localStorage.clear();
+      sessionStorage.clear();
+
+      // Clear Cookies if possible (simple generic clear)
+      document.cookie.split(";").forEach((c) => {
+        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+      });
+
+      // Clear CacheStorage (PWA)
+      if ('caches' in window) {
+        console.log('☢️ CLEARING CACHE STORAGE');
+        const keys = await caches.keys();
+        await Promise.all(keys.map(key => caches.delete(key)));
+      }
+    } catch (e) {
+      console.error('Error clearing storage:', e);
+    }
+
+    // 3. Attempt forced sign out
+    try {
+      await supabase.auth.signOut();
+    } catch (e) { }
+
+    // 4. Force Reload
+    setTimeout(() => {
+      window.location.reload();
+    }, 100);
+  };
+
+  // Helper for safe auth calls with timeout
+  const safeAuthCall = async (promise: Promise<any>, errorMessage: string) => {
+    try {
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Auth timeout')), 5000)
+      );
+      return await Promise.race([promise, timeoutPromise]);
+    } catch (error: any) {
+      if (error.message === 'Auth timeout' || error.message?.includes('timeout')) {
+        await nuclearReset();
+        throw new Error('Connection timeout - Resetting application...');
+      }
+      throw error;
+    }
+  };
+
   const signUpWithEmail = async (email: string, password: string, fullName: string) => {
     setLoading(true);
+    setLoadingMessage('Mendaftarkan akun...');
     try {
-      // Sign up dengan Supabase Auth
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName,
+      // Sign up dengan Supabase Auth wrapped in safety timeout
+      const { data, error } = await safeAuthCall(
+        supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              full_name: fullName,
+            },
           },
-        },
-      });
+        }),
+        'Sign up timeout'
+      );
 
       if (error) {
         throw new Error(error.message);
       }
 
       if (data.user) {
+        setLoadingMessage('Memuat profil...');
         // Tunggu user_profile dibuat via trigger
         await new Promise(resolve => setTimeout(resolve, 1000));
         await loadUserProfile(data.user.id, email);
@@ -214,23 +278,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Sign up error:', error);
       throw error;
     } finally {
-      setLoading(false);
+      if (typeof window !== 'undefined') setLoading(false);
+      setLoadingMessage('');
     }
   };
 
   const signInWithEmail = async (email: string, password: string) => {
     setLoading(true);
+    setLoadingMessage('Masuk ke aplikasi...');
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const { data, error } = await safeAuthCall(
+        supabase.auth.signInWithPassword({
+          email,
+          password,
+        }),
+        'Sign in timeout'
+      );
 
       if (error) {
         throw new Error(error.message);
       }
 
       if (data.user) {
+        setLoadingMessage('Memuat data pengguna...');
         await loadUserProfile(data.user.id, data.user.email || email);
       }
 
@@ -239,42 +309,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Sign in error:', error);
       throw error;
     } finally {
-      setLoading(false);
+      if (typeof window !== 'undefined') setLoading(false);
+      setLoadingMessage('');
     }
   };
 
   const loginAsStudent = async (studentName: string) => {
     setLoading(true);
+    setLoadingMessage('Masuk sebagai siswa...');
     try {
-      if (!studentName.trim()) {
-        throw new Error('Nama siswa tidak boleh kosong');
-      }
+      await safeAuthCall(
+        (async () => {
+          if (!studentName.trim()) {
+            throw new Error('Nama siswa tidak boleh kosong');
+          }
 
-      // Create a simple student session without Supabase authentication
-      const studentId = `student_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          // Create a simple student session
+          const studentId = `student_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-      const student: AuthUser = {
-        id: studentId,
-        email: `${studentId}@student.local`,
-        name: studentName.trim(),
-        role: 'student',
-        isActive: true,
-      };
+          const student: AuthUser = {
+            id: studentId,
+            email: `${studentId}@student.local`,
+            name: studentName.trim(),
+            role: 'student',
+            isActive: true,
+          };
 
-      setUser(student);
-      console.log('✅ Student login successful');
+          setUser(student);
+          console.log('✅ Student login successful');
+        })(),
+        'Student login timeout'
+      );
     } catch (error) {
       console.error('Student login error:', error);
       throw error;
     } finally {
-      setLoading(false);
+      if (typeof window !== 'undefined') setLoading(false);
+      setLoadingMessage('');
     }
   };
 
   const signOut = async () => {
     setLoading(true);
+    setLoadingMessage('Keluar...');
     try {
-      const { error } = await supabase.auth.signOut();
+      const { error } = await safeAuthCall(supabase.auth.signOut(), 'Sign out timeout');
       if (error) throw error;
 
       setUser(null);
@@ -282,15 +361,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('✅ Sign out successful');
     } catch (error) {
       console.error('Sign out error:', error);
-      throw error;
+      // Determine if we should nuclear reset on signout fail? Maybe not necessary, but safe.
+      // throw error; 
     } finally {
-      setLoading(false);
+      if (typeof window !== 'undefined') setLoading(false);
+      setLoadingMessage('');
     }
   };
 
   const value: AuthContextType = {
     user,
     loading,
+    loadingMessage,
     session,
     signUpWithEmail,
     signInWithEmail,
