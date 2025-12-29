@@ -1,8 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
-
 export type UserRole = 'admin' | 'teacher' | 'student' | null;
-
 export interface AuthUser {
   id: string;
   email: string;
@@ -11,7 +9,6 @@ export interface AuthUser {
   isActive?: boolean;
   isSuperAdmin?: boolean;
 }
-
 interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
@@ -25,80 +22,99 @@ interface AuthContextType {
   isTeacher: boolean;
   isStudent: boolean;
 }
-
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-
   // Initialize auth state dari Supabase session
   useEffect(() => {
     let mounted = true;
-
     const initializeAuth = async () => {
       try {
-        // Retrieve session with a timeout safety to prevent infinite loading
-        const sessionPromise = supabase.auth.getSession();
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Auth initialization timeout')), 10000)
-        );
-
-        const result: any = await Promise.race([sessionPromise, timeoutPromise]);
-        const { data: { session }, error: sessionError } = result;
-
-        if (sessionError) throw sessionError;
-
-        if (session?.user) {
-          // Also wrap profile loading in a timeout race (separate 5s)
-          // We don't want to block the whole app if profile fetch is slow
-          try {
-            await Promise.race([
-              loadUserProfile(session.user.id, session.user.email || ''),
-              new Promise((_, reject) => setTimeout(() => reject(new Error('Profile load timeout')), 5000))
-            ]);
-          } catch (profileError) {
-            console.error('Profile load warning:', profileError);
-            // Fallback: create basic user object from session if profile fails
-            if (!user) {
-              setUser({
-                id: session.user.id,
-                email: session.user.email || '',
-                name: session.user.email?.split('@')[0] || 'User',
-                role: 'student', // default safe role
-              });
-            }
+        // GLOBAL FAILSAFE: Force loading to false after 8 seconds no matter what
+        const failsafeTimeout = setTimeout(() => {
+          if (mounted && loading) {
+            console.warn('⚠️ Auth initialization took too long, forcing completion');
+            setLoading(false);
           }
-          setSession(session);
+        }, 8000);
+        // Retrieve session
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) throw sessionError;
+        if (session?.user) {
+          // Verify with getUser to ensure token is actually valid on server
+          // getSession only checks local storage
+          const { data: { user: validUser }, error: userError } = await supabase.auth.getUser();
+          
+          if (userError || !validUser) {
+             console.warn('Session found but token invalid:', userError);
+             await supabase.auth.signOut();
+             if (mounted) {
+                setSession(null);
+                setUser(null);
+             }
+          } else {
+             // Token is valid, load profile
+             if (mounted) setSession(session);
+             
+             // Wrap profile loading in a timeout race
+             try {
+               await Promise.race([
+                 loadUserProfile(session.user.id, session.user.email || ''),
+                 new Promise((_, reject) => setTimeout(() => reject(new Error('Profile load timeout')), 5000))
+               ]);
+             } catch (profileError) {
+               console.error('Profile load warning:', profileError);
+               // Fallback: create basic user object from session if profile fails
+               if (mounted && !user) {
+                 setUser({
+                   id: session.user.id,
+                   email: session.user.email || '',
+                   name: session.user.email?.split('@')[0] || 'User',
+                   role: 'student', // default safe role
+                 });
+               }
+             }
+          }
         }
+        clearTimeout(failsafeTimeout);
       } catch (error) {
         console.error('Error initializing auth:', error);
+        // Ensure we don't leave the user with a broken state - better to be logged out than stuck
+        if (mounted) {
+           setUser(null);
+           setSession(null);
+        }
       } finally {
         if (mounted) setLoading(false);
       }
     };
-
     initializeAuth();
-
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        setSession(session);
-        if (session?.user) {
-          await loadUserProfile(session.user.id, session.user.email || '');
-        } else {
-          setUser(null);
+        if (!mounted) return;
+        
+        // Only react to explicit changes, avoid fighting with initializeAuth
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+             setSession(session);
+             if (session?.user) {
+               await loadUserProfile(session.user.id, session.user.email || '');
+             }
+             setLoading(false); 
+        } else if (event === 'SIGNED_OUT') {
+             setSession(null);
+             setUser(null);
+             setLoading(false);
         }
       }
     );
-
     return () => {
       mounted = false;
       subscription?.unsubscribe();
     };
   }, []);
-
   const loadUserProfile = async (userId: string, email: string) => {
     try {
       const { data, error } = await supabase
@@ -106,12 +122,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .select('*')
         .eq('id', userId)
         .single();
-
       if (error && error.code !== 'PGRST116') {
         // PGRST116 = no rows, which is okay for first login
         throw error;
       }
-
       // Check if user is a super admin
       let isSuperAdmin = false;
       try {
@@ -120,13 +134,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .select('is_super_admin')
           .eq('id', userId)
           .single();
-
         isSuperAdmin = adminData?.is_super_admin || false;
       } catch (adminError) {
         // User is not an admin, that's okay
         isSuperAdmin = false;
       }
-
       if (data) {
         setUser({
           id: userId,
@@ -150,7 +162,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Error loading user profile:', error);
     }
   };
-
   const signUpWithEmail = async (email: string, password: string, fullName: string) => {
     setLoading(true);
     try {
@@ -164,17 +175,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           },
         },
       });
-
       if (error) {
         throw new Error(error.message);
       }
-
       if (data.user) {
         // Tunggu user_profile dibuat via trigger
         await new Promise(resolve => setTimeout(resolve, 1000));
         await loadUserProfile(data.user.id, email);
       }
-
       console.log('✅ Sign up successful');
     } catch (error) {
       console.error('Sign up error:', error);
@@ -183,7 +191,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     }
   };
-
   const signInWithEmail = async (email: string, password: string) => {
     setLoading(true);
     try {
@@ -191,15 +198,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email,
         password,
       });
-
       if (error) {
         throw new Error(error.message);
       }
-
       if (data.user) {
         await loadUserProfile(data.user.id, data.user.email || email);
       }
-
       console.log('✅ Sign in successful');
     } catch (error) {
       console.error('Sign in error:', error);
@@ -208,17 +212,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     }
   };
-
   const loginAsStudent = async (studentName: string) => {
     setLoading(true);
     try {
       if (!studentName.trim()) {
         throw new Error('Nama siswa tidak boleh kosong');
       }
-
       // Create a simple student session without Supabase authentication
       const studentId = `student_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
       const student: AuthUser = {
         id: studentId,
         email: `${studentId}@student.local`,
@@ -226,7 +227,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         role: 'student',
         isActive: true,
       };
-
       setUser(student);
       console.log('✅ Student login successful');
     } catch (error) {
@@ -236,13 +236,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     }
   };
-
   const signOut = async () => {
     setLoading(true);
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-
       setUser(null);
       setSession(null);
       console.log('✅ Sign out successful');
@@ -253,7 +251,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     }
   };
-
   const value: AuthContextType = {
     user,
     loading,
@@ -267,10 +264,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isTeacher: user?.role === 'teacher',
     isStudent: user?.role === 'student',
   };
-
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
-
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {
@@ -278,18 +273,15 @@ export function useAuth() {
   }
   return context;
 }
-
 // Helper hooks
 export function useIsAdmin() {
   const { isAdmin } = useAuth();
   return isAdmin;
 }
-
 export function useIsTeacher() {
   const { isTeacher } = useAuth();
   return isTeacher;
 }
-
 export function useIsStudent() {
   const { isStudent } = useAuth();
   return isStudent;
