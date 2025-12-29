@@ -11,7 +11,8 @@ import '@/styles/globals.css'
 // Component that uses auth
 function AppContent({ Component, pageProps, currentPage, setCurrentPage, currentSubpage, setCurrentSubpage }: any) {
   const router = useRouter()
-  const { isAuthenticated, loading, user, signOut } = useAuth()
+  // @ts-ignore
+  const { isAuthenticated, loading, user, signOut, loadingMessage } = useAuth()
   const [isMobileSidebarOpen, setMobileSidebarOpen] = useState(false)
 
   // Force unregister all service workers to kill PWA cache
@@ -68,21 +69,55 @@ function AppContent({ Component, pageProps, currentPage, setCurrentPage, current
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 flex-col gap-4">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Memuat aplikasi...</p>
+        <div className="text-center p-8 bg-white rounded-xl shadow-lg max-w-sm w-full mx-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-6"></div>
+
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Memuat Aplikasi</h3>
+
+          {/* Debug Status Message */}
+          <p className="text-sm text-gray-500 mb-6 font-mono bg-gray-50 p-2 rounded border border-gray-100">
+            {/* @ts-ignore */}
+            {user?.loadingMessage || 'Menghubungkan ke server...'}
+          </p>
+
+          {showReload && (
+            <div className="text-center flex flex-col gap-3 animate-in fade-in duration-500">
+              <div className="h-px bg-gray-100 w-full mb-2"></div>
+              <p className="text-xs text-amber-600 font-medium flex items-center justify-center gap-1">
+                ⚠️ Koneksi lambat atau terputus
+              </p>
+
+              <button
+                onClick={() => window.location.reload()}
+                className="w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium transition-colors shadow-sm"
+              >
+                Muat Ulang Halaman
+              </button>
+
+              <button
+                onClick={() => {
+                  if (confirm('Ini akan menghapus semua data cache browser untuk aplikasi ini. Lanjutkan?')) {
+                    console.log('☢️ Manual Reset Triggered');
+                    localStorage.clear();
+                    sessionStorage.clear();
+                    if ('caches' in window) {
+                      caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))));
+                    }
+                    if ('serviceWorker' in navigator) {
+                      navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
+                    }
+                    setTimeout(() => window.location.reload(), 100);
+                  }
+                }}
+                className="w-full px-4 py-2.5 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium transition-colors"
+              >
+                🗑️ Reset Cache & Data
+              </button>
+            </div>
+          )}
         </div>
-        {showReload && (
-          <div className="text-center flex flex-col gap-2">
-            <p className="text-sm text-yellow-600">Koneksi tampak lambat...</p>
-            <button
-              onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm transition-colors"
-            >
-              Muat Ulang Halaman
-            </button>
-          </div>
-        )}
+
+        <p className="text-xs text-gray-400 mt-8">Versi 4.1 (Safe Mode)</p>
       </div>
     )
   }
