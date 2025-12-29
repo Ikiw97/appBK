@@ -81,19 +81,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         // Critical Fix: If timeout or error occurs, force clear everything to prevent infinite loading
         if (error.message === 'Auth initialization timeout' || error.message?.includes('timeout')) {
-          console.warn('⚠️ Auth timeout detected. Forcing session reset to fix stuck loading state.');
+          console.warn('⚠️ Auth timeout detected. Performing aggressive recovery.');
 
           // 1. Force state to loaded (stops spinner)
           setUser(null);
           setSession(null);
 
-          // 2. Clear local storage items that might be corrupted
+          // 2. Nuclear Option: Clear ALL storage to remove any corrupted state/caches
           try {
-            const keyToRemove = Object.keys(localStorage).find(key => key.includes('supabase.auth.token'));
-            if (keyToRemove) {
-              console.log('🧹 Clearing potentially corrupted token:', keyToRemove);
-              localStorage.removeItem(keyToRemove);
-            }
+            console.log('☢️ CLEARING ALL LOCAL STORAGE');
+            localStorage.clear();
           } catch (e) {
             console.error('Error clearing storage:', e);
           }
@@ -102,8 +99,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           try {
             await supabase.auth.signOut();
           } catch (e) {
-            // Ignore signout errors during recovery
+            // Ignore signout errors
           }
+
+          // 4. Force Reload to ensure a clean slate
+          // Use a short timeout to allow the console logs to be seen if debugging
+          setTimeout(() => {
+            window.location.reload();
+          }, 100);
         }
       } finally {
         if (mounted) setLoading(false);
