@@ -14,6 +14,20 @@ function AppContent({ Component, pageProps, currentPage, setCurrentPage, current
   const { isAuthenticated, loading, user, signOut } = useAuth()
   const [isMobileSidebarOpen, setMobileSidebarOpen] = useState(false)
 
+  // Force unregister all service workers to kill PWA cache
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+          for (let registration of registrations) {
+            console.log('🗑️ Unregistering Service Worker:', registration);
+            registration.unregister();
+          }
+        });
+      });
+    }
+  }, []);
+
   // Pages that don't need authentication
   const noAuthPages = ['/login']
   const isNoAuthPage = noAuthPages.includes(router.pathname)
