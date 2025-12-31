@@ -14,7 +14,7 @@ export interface UserProfileData {
   id?: string;
   email: string;
   fullName: string;
-  role: 'admin' | 'teacher' | 'student';
+  role: 'admin' | 'teacher' | 'student' | 'super_admin';
 }
 
 /**
