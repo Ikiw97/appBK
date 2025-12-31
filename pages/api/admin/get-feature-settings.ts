@@ -73,6 +73,8 @@ export default async function handler(
           maintenanceMode: data.settings.system?.maintenanceMode ?? DEFAULT_SETTINGS.system.maintenanceMode,
           emailNotifications: data.settings.system?.emailNotifications ?? DEFAULT_SETTINGS.system.emailNotifications,
           systemAnnouncements: data.settings.system?.systemAnnouncements ?? DEFAULT_SETTINGS.system.systemAnnouncements,
+          schoolName: data.settings.system?.schoolName ?? DEFAULT_SETTINGS.system.schoolName,
+          adminEmail: data.settings.system?.adminEmail ?? DEFAULT_SETTINGS.system.adminEmail,
         },
         studentManagement: {
           studentEnrollment: data.settings.studentManagement?.studentEnrollment ?? DEFAULT_SETTINGS.studentManagement.studentEnrollment,
