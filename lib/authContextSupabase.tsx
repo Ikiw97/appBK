@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 
-export type UserRole = 'admin' | 'teacher' | 'student' | null;
+export type UserRole = 'admin' | 'teacher' | 'student' | 'super_admin' | null;
 
 export interface AuthUser {
   id: string;
@@ -400,7 +400,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loginAsStudent,
     signOut,
     isAuthenticated: user !== null,
-    isAdmin: user?.role === 'admin',
+    isAdmin: user?.role === 'admin' || user?.role === 'super_admin',
     isTeacher: user?.role === 'teacher',
     isStudent: user?.role === 'student',
   };
