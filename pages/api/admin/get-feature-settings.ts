@@ -58,6 +58,7 @@ export default async function handler(
           grit: data.settings.assessments?.grit ?? DEFAULT_SETTINGS.assessments.grit,
           holland_code: data.settings.assessments?.holland_code ?? DEFAULT_SETTINGS.assessments.holland_code,
           rmib: data.settings.assessments?.rmib ?? DEFAULT_SETTINGS.assessments.rmib,
+          sociometry: data.settings.assessments?.sociometry ?? DEFAULT_SETTINGS.assessments.sociometry,
         },
         exercises: {
           psikotest: data.settings.exercises?.psikotest ?? DEFAULT_SETTINGS.exercises.psikotest,
