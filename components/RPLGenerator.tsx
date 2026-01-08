@@ -785,6 +785,19 @@ export default function RPLGenerator({ schoolMode }: RPLGeneratorProps) {
                                                 </select>
                                             </div>
 
+                                            <div className="col-span-2">
+                                                <label className="block text-sm font-semibold text-slate-700 mb-2">Komponen Layanan</label>
+                                                <select
+                                                    value={formData.serviceComponent}
+                                                    onChange={(e) => handleInputChange('serviceComponent', e.target.value)}
+                                                    className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all appearance-none bg-white"
+                                                >
+                                                    {serviceComponentOptions.map(opt => (
+                                                        <option key={opt} value={opt}>{opt}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+
                                             {/* Sub Tema (Topic) */}
                                             <div className="col-span-2">
                                                 <label className="block text-sm font-semibold text-slate-700 mb-2">Sub Tema (Topik)</label>
