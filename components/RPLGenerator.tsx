@@ -841,14 +841,10 @@ export default function RPLGenerator({ schoolMode }: RPLGeneratorProps) {
                             <div className="p-8 animate-in fade-in slide-in-from-right-4 duration-300">
                                 <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
                                     <FileQuestion className="text-blue-600" />
-                                    Pedagogi & Lingkungan Belajar
+                                    Analisis & Strategi
                                 </h2>
                                 <div className="space-y-6 animate-fadeIn">
                                     <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                                        <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                                            <Users className="w-5 h-5 text-blue-600" />
-                                            Analisis & Strategi
-                                        </h3>
                                         <div className="space-y-6">
                                             {renderDynamicList('Identifikasi Peserta Didik', 'studentProfile', '...')}
                                             {renderDynamicList('Identifikasi Materi Pelajaran', 'materials', '...')}
