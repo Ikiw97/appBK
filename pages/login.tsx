@@ -205,7 +205,7 @@ export default function LoginPage() {
 
             <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-blue-900 text-xs font-medium mb-2">
-                📝 Gunakan email dan password akun Supabase Anda
+                📝 Gunakan email dan password akun Anda
               </p>
               <p className="text-blue-800 text-xs">
                 Jika belum memiliki akun, hubungi administrator untuk membuat akun baru
