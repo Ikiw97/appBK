@@ -8,7 +8,7 @@ export interface ClassOption {
 
 const smpGrades = ['VII', 'VIII', 'IX'];
 const smaSmkGrades = ['X', 'XI', 'XII'];
-const subClasses = ['1', '2', '3', '4', '5', '6', '7', '8'];
+const subClasses = ['1', '2', '3', '4'];
 
 export function getGradesByMode(mode: SchoolMode): string[] {
   return mode === 'smp' ? smpGrades : smaSmkGrades;
