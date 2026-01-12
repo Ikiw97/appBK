@@ -55,21 +55,21 @@ export const STATUS_ABSENSI = {
 } as const;
 
 export const DAFTAR_KELAS_SMP = [
-  'VII-A', 'VII-B', 'VII-C', 'VII-D',
-  'VIII-A', 'VIII-B', 'VIII-C', 'VIII-D',
-  'IX-A', 'IX-B', 'IX-C', 'IX-D'
+  'VII-1', 'VII-2', 'VII-3', 'VII-4',
+  'VIII-1', 'VIII-2', 'VIII-3', 'VIII-4',
+  'IX-1', 'IX-2', 'IX-3', 'IX-4'
 ];
 
 export const DAFTAR_KELAS_SMA = [
-  'X-A', 'X-B', 'X-C', 'X-D',
-  'XI-A', 'XI-B', 'XI-C', 'XI-D',
-  'XII-A', 'XII-B', 'XII-C', 'XII-D'
+  'X-1', 'X-2', 'X-3', 'X-4',
+  'XI-1', 'XI-2', 'XI-3', 'XI-4',
+  'XII-1', 'XII-2', 'XII-3', 'XII-4'
 ];
 
 export const DAFTAR_KELAS_SMK = [
-  'X-A', 'X-B', 'X-C', 'X-D',
-  'XI-A', 'XI-B', 'XI-C', 'XI-D',
-  'XII-A', 'XII-B', 'XII-C', 'XII-D'
+  'X-1', 'X-2', 'X-3', 'X-4',
+  'XI-1', 'XI-2', 'XI-3', 'XI-4',
+  'XII-1', 'XII-2', 'XII-3', 'XII-4'
 ];
 
 export function getDaftarKelas(schoolMode: 'smp' | 'sma_smk'): string[] {
