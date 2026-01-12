@@ -22,13 +22,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             throw error;
         }
 
-        // Group by class for easier consumption
+        // Group by class for easier consumption and map fields
         const groupedByClass: Record<string, any[]> = {};
         (data || []).forEach(student => {
             if (!groupedByClass[student.kelas]) {
                 groupedByClass[student.kelas] = [];
             }
-            groupedByClass[student.kelas].push(student);
+            // Map database field (jenis_kelamin) to frontend field (jenisKelamin)
+            groupedByClass[student.kelas].push({
+                id: student.id,
+                nis: student.nis,
+                nama: student.nama,
+                kelas: student.kelas,
+                jenisKelamin: student.jenis_kelamin
+            });
         });
 
         return res.status(200).json({ success: true, data: groupedByClass });
