@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Calendar, Clock, User, Plus, X, Users, MapPin, BookOpen, Trash2 } from 'lucide-react';
+import { Calendar, Clock, User, Plus, X, Users, MapPin, BookOpen, Trash2, UserPlus } from 'lucide-react';
 import { useAuth } from '@/lib/authContextSupabase';
 import { generateClasses, type SchoolMode } from '@/lib/classHelper';
+import { getAllSiswaData } from '@/lib/siswaStorage';
+import type { SiswaAbsensi } from '@/lib/absensiTypes';
 
 interface ScheduleEvent {
     id: number;
@@ -31,14 +33,36 @@ interface ClassSchedule {
     created_at: string;
 }
 
+interface IndividualSchedule {
+    id: number;
+    student_id: string;
+    student_name: string;
+    student_class: string;
+    topic: string;
+    description: string;
+    scheduled_date: string;
+    scheduled_time: string;
+    duration: string;
+    location: string;
+    counselor: string;
+    created_at: string;
+}
+
 export default function CounselingSchedule() {
     const { user } = useAuth();
     const [individualSchedules, setIndividualSchedules] = useState<ScheduleEvent[]>([]);
+    const [customIndividualSchedules, setCustomIndividualSchedules] = useState<IndividualSchedule[]>([]);
     const [classSchedules, setClassSchedules] = useState<ClassSchedule[]>([]);
     const [loading, setLoading] = useState(true);
     const [filterDate, setFilterDate] = useState('');
     const [showAddModal, setShowAddModal] = useState(false);
+    const [showAddIndividualModal, setShowAddIndividualModal] = useState(false);
     const [activeTab, setActiveTab] = useState<'all' | 'individual' | 'class'>('all');
+    
+    // State untuk data siswa dari master data
+    const [allStudents, setAllStudents] = useState<Record<string, SiswaAbsensi[]>>({});
+    const [selectedClassForStudent, setSelectedClassForStudent] = useState('');
+    const [filteredStudents, setFilteredStudents] = useState<SiswaAbsensi[]>([]);
 
     const [schoolMode] = useState<SchoolMode>(() => {
         if (typeof window !== 'undefined') {
@@ -59,9 +83,42 @@ export default function CounselingSchedule() {
         location: ''
     });
 
+    // Form state untuk jadwal individu
+    const [newIndividualSchedule, setNewIndividualSchedule] = useState({
+        student_id: '',
+        student_name: '',
+        student_class: '',
+        topic: '',
+        description: '',
+        scheduled_date: '',
+        scheduled_time: '',
+        duration: '45 Menit',
+        location: 'Ruang BK'
+    });
+
     useEffect(() => {
         fetchSchedules();
+        fetchAllStudents();
     }, []);
+
+    // Fetch daftar siswa dari master data
+    const fetchAllStudents = async () => {
+        try {
+            const data = await getAllSiswaData();
+            setAllStudents(data);
+        } catch (error) {
+            console.error('Error fetching students:', error);
+        }
+    };
+
+    // Update filtered students saat kelas dipilih
+    useEffect(() => {
+        if (selectedClassForStudent && allStudents[selectedClassForStudent]) {
+            setFilteredStudents(allStudents[selectedClassForStudent]);
+        } else {
+            setFilteredStudents([]);
+        }
+    }, [selectedClassForStudent, allStudents]);
 
     const fetchSchedules = async () => {
         setLoading(true);
@@ -94,6 +151,16 @@ export default function CounselingSchedule() {
                 // Don't throw - table might not exist yet
             } else {
                 setClassSchedules(classData || []);
+            }
+
+            // Fetch custom individual schedules
+            const { data: individualData2, error: individualError2 } = await supabase
+                .from('individual_schedules')
+                .select('*')
+                .order('scheduled_date', { ascending: true });
+
+            if (!individualError2) {
+                setCustomIndividualSchedules(individualData2 || []);
             }
         } catch (error) {
             console.error('Error fetching schedules:', error);
@@ -158,16 +225,90 @@ export default function CounselingSchedule() {
         }
     };
 
+    // Handler untuk tambah jadwal individu
+    const handleAddIndividualSchedule = async () => {
+        if (!newIndividualSchedule.student_id || !newIndividualSchedule.topic || !newIndividualSchedule.scheduled_date || !newIndividualSchedule.scheduled_time) {
+            alert('Mohon lengkapi nama siswa, topik, tanggal, dan waktu.');
+            return;
+        }
+
+        try {
+            const { error } = await supabase
+                .from('individual_schedules')
+                .insert([{
+                    student_id: newIndividualSchedule.student_id,
+                    student_name: newIndividualSchedule.student_name,
+                    student_class: newIndividualSchedule.student_class,
+                    topic: newIndividualSchedule.topic,
+                    description: newIndividualSchedule.description,
+                    scheduled_date: newIndividualSchedule.scheduled_date,
+                    scheduled_time: newIndividualSchedule.scheduled_time,
+                    duration: newIndividualSchedule.duration,
+                    location: newIndividualSchedule.location,
+                    counselor: user?.name || user?.email || 'Admin'
+                }]);
+
+            if (error) throw error;
+
+            setShowAddIndividualModal(false);
+            setSelectedClassForStudent('');
+            setNewIndividualSchedule({
+                student_id: '',
+                student_name: '',
+                student_class: '',
+                topic: '',
+                description: '',
+                scheduled_date: '',
+                scheduled_time: '',
+                duration: '45 Menit',
+                location: 'Ruang BK'
+            });
+            fetchSchedules();
+        } catch (error) {
+            console.error('Error adding individual schedule:', error);
+            alert('Gagal menambahkan jadwal. Pastikan tabel database sudah tersedia.');
+        }
+    };
+
+    // Handler untuk hapus jadwal individu
+    const handleDeleteIndividualSchedule = async (id: number) => {
+        if (!confirm('Apakah Anda yakin ingin menghapus jadwal ini?')) return;
+
+        try {
+            const { error } = await supabase
+                .from('individual_schedules')
+                .delete()
+                .eq('id', id);
+
+            if (error) throw error;
+            fetchSchedules();
+        } catch (error) {
+            console.error('Error deleting individual schedule:', error);
+            alert('Gagal menghapus jadwal.');
+        }
+    };
+
     // Combine and filter schedules
     const getCombinedSchedules = () => {
         let combined: any[] = [];
 
         if (activeTab === 'all' || activeTab === 'individual') {
+            // Jadwal individu dari case_timeline
             combined = [...combined, ...individualSchedules.map(s => ({
                 ...s,
                 type: 'individual',
+                subtype: 'case',
                 date: new Date(s.created_at),
                 displayDate: s.created_at
+            }))];
+            
+            // Jadwal individu dari tabel individual_schedules
+            combined = [...combined, ...customIndividualSchedules.map(s => ({
+                ...s,
+                type: 'individual',
+                subtype: 'custom',
+                date: new Date(`${s.scheduled_date}T${s.scheduled_time}`),
+                displayDate: `${s.scheduled_date}T${s.scheduled_time}`
             }))];
         }
 
@@ -219,20 +360,29 @@ export default function CounselingSchedule() {
                             </p>
                         </div>
 
-                        <button
-                            onClick={() => setShowAddModal(true)}
-                            className="flex items-center gap-3 px-6 py-3 bg-white text-indigo-700 rounded-xl hover:bg-white/90 transition-all font-bold shadow-lg shadow-indigo-900/30 hover:scale-105"
-                        >
-                            <Plus size={20} />
-                            <span>Tambah Jadwal Kelas</span>
-                        </button>
+                        <div className="flex flex-wrap gap-3">
+                            <button
+                                onClick={() => setShowAddIndividualModal(true)}
+                                className="flex items-center gap-2 px-5 py-2.5 bg-white/10 backdrop-blur-sm border border-white/30 text-white rounded-xl hover:bg-white/20 transition-all font-medium"
+                            >
+                                <UserPlus size={18} />
+                                <span>Tambah Jadwal Individu</span>
+                            </button>
+                            <button
+                                onClick={() => setShowAddModal(true)}
+                                className="flex items-center gap-3 px-6 py-3 bg-white text-indigo-700 rounded-xl hover:bg-white/90 transition-all font-bold shadow-lg shadow-indigo-900/30 hover:scale-105"
+                            >
+                                <Plus size={20} />
+                                <span>Tambah Jadwal Kelas</span>
+                            </button>
+                        </div>
                     </div>
 
                     {/* Stats */}
                     <div className="flex flex-wrap gap-4 mt-8">
                         <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/10 rounded-full px-4 py-2">
                             <User size={14} className="text-white/60" />
-                            <span className="text-sm font-medium text-white/80">{individualSchedules.length} Individu</span>
+                            <span className="text-sm font-medium text-white/80">{individualSchedules.length + customIndividualSchedules.length} Individu</span>
                         </div>
                         <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/10 rounded-full px-4 py-2">
                             <Users size={14} className="text-white/60" />
@@ -334,13 +484,21 @@ export default function CounselingSchedule() {
                                                 <User size={18} className="text-blue-600" />
                                             )}
                                             <h3 className="text-lg font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
-                                                {item.type === 'class' ? item.topic : (item.counseling_cases?.student_name || 'Siswa Tidak Dikenal')}
+                                                {item.type === 'class' 
+                                                    ? item.topic 
+                                                    : item.subtype === 'custom' 
+                                                        ? item.student_name 
+                                                        : (item.counseling_cases?.student_name || 'Siswa Tidak Dikenal')}
                                             </h3>
                                             <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${item.type === 'class'
                                                 ? 'bg-purple-50 text-purple-600 border-purple-200'
                                                 : 'bg-blue-50 text-blue-600 border-blue-200'
                                                 }`}>
-                                                {item.type === 'class' ? item.class : (item.counseling_cases?.class || '-')}
+                                                {item.type === 'class' 
+                                                    ? item.class 
+                                                    : item.subtype === 'custom' 
+                                                        ? item.student_class 
+                                                        : (item.counseling_cases?.class || '-')}
                                             </span>
                                         </div>
 
@@ -351,13 +509,13 @@ export default function CounselingSchedule() {
                                                     {new Date(item.displayDate).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB
                                                 </span>
                                             </div>
-                                            {item.type === 'class' && item.duration && (
+                                            {(item.type === 'class' || item.subtype === 'custom') && item.duration && (
                                                 <div className="flex items-center gap-1.5">
                                                     <BookOpen size={14} />
                                                     <span>{item.duration}</span>
                                                 </div>
                                             )}
-                                            {item.type === 'class' && item.location && (
+                                            {(item.type === 'class' || item.subtype === 'custom') && item.location && (
                                                 <div className="flex items-center gap-1.5">
                                                     <MapPin size={14} />
                                                     <span>{item.location}</span>
@@ -365,7 +523,7 @@ export default function CounselingSchedule() {
                                             )}
                                             <div className="flex items-center gap-1.5">
                                                 <User size={14} />
-                                                <span>{item.type === 'class' ? item.counselor : item.author}</span>
+                                                <span>{item.type === 'class' ? item.counselor : item.subtype === 'custom' ? item.counselor : item.author}</span>
                                             </div>
                                         </div>
 
@@ -374,12 +532,20 @@ export default function CounselingSchedule() {
                                                 {item.description}
                                             </p>
                                         )}
+                                        {item.subtype === 'custom' && item.topic && (
+                                            <div className="mt-2">
+                                                <span className="text-xs font-medium text-slate-500">Topik: </span>
+                                                <span className="text-sm text-slate-700">{item.topic}</span>
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* Actions */}
-                                    {item.type === 'class' && (
+                                    {(item.type === 'class' || item.subtype === 'custom') && (
                                         <button
-                                            onClick={() => handleDeleteClassSchedule(item.id)}
+                                            onClick={() => item.type === 'class' 
+                                                ? handleDeleteClassSchedule(item.id) 
+                                                : handleDeleteIndividualSchedule(item.id)}
                                             className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                                             title="Hapus Jadwal"
                                         >
@@ -500,6 +666,171 @@ export default function CounselingSchedule() {
                             </button>
                             <button
                                 onClick={handleAddClassSchedule}
+                                className="px-5 py-2.5 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors shadow-sm"
+                            >
+                                Simpan Jadwal
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Add Individual Schedule Modal */}
+            {showAddIndividualModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                        <div className="p-6 border-b border-slate-200 flex items-center justify-between sticky top-0 bg-white">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-blue-100 rounded-lg">
+                                    <UserPlus size={20} className="text-blue-600" />
+                                </div>
+                                <h2 className="text-xl font-bold text-slate-900">Tambah Jadwal Konseling Individu</h2>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    setShowAddIndividualModal(false);
+                                    setSelectedClassForStudent('');
+                                }}
+                                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="p-6 space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Kelas <span className="text-red-500">*</span></label>
+                                    <select
+                                        value={selectedClassForStudent}
+                                        onChange={(e) => {
+                                            setSelectedClassForStudent(e.target.value);
+                                            setNewIndividualSchedule({
+                                                ...newIndividualSchedule,
+                                                student_id: '',
+                                                student_name: '',
+                                                student_class: e.target.value
+                                            });
+                                        }}
+                                        className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                                    >
+                                        <option value="">Pilih Kelas</option>
+                                        {classes.map(cls => (
+                                            <option key={cls.value} value={cls.value}>{cls.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Nama Siswa <span className="text-red-500">*</span></label>
+                                    <select
+                                        value={newIndividualSchedule.student_id}
+                                        onChange={(e) => {
+                                            const student = filteredStudents.find(s => s.id === e.target.value);
+                                            setNewIndividualSchedule({
+                                                ...newIndividualSchedule,
+                                                student_id: e.target.value,
+                                                student_name: student?.nama || '',
+                                                student_class: selectedClassForStudent
+                                            });
+                                        }}
+                                        className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                                        disabled={!selectedClassForStudent}
+                                    >
+                                        <option value="">{selectedClassForStudent ? 'Pilih Siswa' : 'Pilih kelas terlebih dahulu'}</option>
+                                        {filteredStudents.map(student => (
+                                            <option key={student.id} value={student.id}>
+                                                {student.nama} ({student.nis})
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {selectedClassForStudent && filteredStudents.length === 0 && (
+                                        <p className="text-xs text-amber-600 mt-1">Tidak ada siswa di kelas ini. Silakan tambahkan siswa di menu Master Data.</p>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-semibold text-slate-700 mb-2">Topik / Tujuan Konseling <span className="text-red-500">*</span></label>
+                                <input
+                                    type="text"
+                                    value={newIndividualSchedule.topic}
+                                    onChange={(e) => setNewIndividualSchedule({ ...newIndividualSchedule, topic: e.target.value })}
+                                    placeholder="Contoh: Konflik dengan teman, Motivasi belajar, Masalah keluarga"
+                                    className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Tanggal <span className="text-red-500">*</span></label>
+                                    <input
+                                        type="date"
+                                        value={newIndividualSchedule.scheduled_date}
+                                        onChange={(e) => setNewIndividualSchedule({ ...newIndividualSchedule, scheduled_date: e.target.value })}
+                                        className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Waktu <span className="text-red-500">*</span></label>
+                                    <input
+                                        type="time"
+                                        value={newIndividualSchedule.scheduled_time}
+                                        onChange={(e) => setNewIndividualSchedule({ ...newIndividualSchedule, scheduled_time: e.target.value })}
+                                        className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Durasi</label>
+                                    <input
+                                        type="text"
+                                        value={newIndividualSchedule.duration}
+                                        onChange={(e) => setNewIndividualSchedule({ ...newIndividualSchedule, duration: e.target.value })}
+                                        placeholder="45 Menit"
+                                        className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Lokasi</label>
+                                    <input
+                                        type="text"
+                                        value={newIndividualSchedule.location}
+                                        onChange={(e) => setNewIndividualSchedule({ ...newIndividualSchedule, location: e.target.value })}
+                                        placeholder="Ruang BK"
+                                        className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-semibold text-slate-700 mb-2">Deskripsi / Catatan</label>
+                                <textarea
+                                    value={newIndividualSchedule.description}
+                                    onChange={(e) => setNewIndividualSchedule({ ...newIndividualSchedule, description: e.target.value })}
+                                    placeholder="Catatan tambahan tentang sesi konseling individu..."
+                                    rows={3}
+                                    className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="p-6 border-t border-slate-200 flex justify-end gap-3 sticky bottom-0 bg-white">
+                            <button
+                                onClick={() => {
+                                    setShowAddIndividualModal(false);
+                                    setSelectedClassForStudent('');
+                                }}
+                                className="px-5 py-2.5 rounded-xl font-medium text-slate-600 hover:bg-slate-100 transition-colors"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                onClick={handleAddIndividualSchedule}
                                 className="px-5 py-2.5 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors shadow-sm"
                             >
                                 Simpan Jadwal
