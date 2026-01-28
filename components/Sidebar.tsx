@@ -126,6 +126,13 @@ export default function Sidebar({
           icon: ClipboardList,
           submenu: null,
           visible: true
+        },
+        {
+          id: 'parent-guest-book',
+          label: 'Buku Tamu Ortu',
+          icon: Users,
+          submenu: null,
+          visible: true
         }
       ]
     },
