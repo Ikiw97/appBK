@@ -28,6 +28,7 @@ import ManajemenSiswaKelas from '@/components/ManajemenSiswaKelas';
 import SociometryWrapper from '@/components/SociometryWrapper';
 import RPLGenerator from '@/components/RPLGenerator';
 import CounselingReport from '@/components/CounselingReport';
+import ParentGuestBook from '@/components/ParentGuestBook';
 import { useFeatureSettings } from '@/lib/useFeatureSettings';
 import { saveFeatureSettings } from '@/lib/featureSettings';
 import type { SchoolMode } from '@/lib/classHelper';
@@ -711,6 +712,8 @@ export default function Home({
     return <SociometryWrapper schoolMode={schoolMode} />;
   } else if (currentPage === 'counseling-report') {
     return <CounselingReport schoolMode={schoolMode} />;
+  } else if (currentPage === 'parent-guest-book') {
+    return <ParentGuestBook schoolMode={schoolMode} />;
   } else if (currentPage === 'pengaturan') {
     return renderPengaturan();
   }
