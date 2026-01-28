@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { BookUser, Plus, Trash2, Search, Edit, X, Calendar, User, Users, FileDown } from 'lucide-react';
 import { getSiswaByKelas } from '@/lib/siswaStorage';
 import { generateClasses } from '@/lib/classHelper';
-import { generateParentGuestBookDoc } from '@/lib/docs/generateParentGuestBookDoc';
+import { generateParentGuestBookDoc } from '@/lib/generateParentGuestBookDoc';
 import type { SiswaAbsensi } from '@/lib/absensiTypes';
 
 interface ParentGuestBookEntry {
