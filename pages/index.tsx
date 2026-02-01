@@ -783,6 +783,8 @@ export default function Home({
     return <ParentGuestBook schoolMode={schoolMode} />;
   } else if (currentPage === 'pengaturan') {
     return renderPengaturan();
+  } else if (currentPage === 'sosiometri') {
+    return <SociometryWrapper schoolMode={schoolMode} />;
   }
 
   return renderDashboard();
