@@ -106,14 +106,14 @@ const PATH_INFO: Record<string, {
         careers: ['Staff Hotel', 'Chef', 'Tour Guide', 'Flight Attendant', 'Event  Organizer']
     },
     smk_agribisnis: {
-        label: 'Agribisnis',
-        fullName: 'SMK - Agribisnis & Agroteknologi',
+        label: 'Agrobisnis',
+        fullName: 'SMK - Agrobisnis & Agroteknologi',
         type: 'SMK',
         icon: Sprout,
         color: '#84cc16', // lime
-        description: 'Program keahlian yang mempelajari pertanian modern, peternakan, dan agribisnis. Cocok untuk yang suka alam dan bercocok tanam.',
-        subjects: ['Pertanian', 'Peternakan', 'Agribisnis', 'Teknologi Pertanian'],
-        careers: ['Petani Modern', 'Peternak', 'Pengusaha Agribisnis', 'Ahli Pertanian']
+        description: 'Program keahlian yang mempelajari pertanian modern, peternakan, dan agrobisnis. Cocok untuk yang suka alam dan bercocok tanam.',
+        subjects: ['Pertanian', 'Peternakan', 'Agrobisnis', 'Teknologi Pertanian'],
+        careers: ['Petani Modern', 'Peternak', 'Pengusaha Agrobisnis', 'Ahli Pertanian']
     },
     smk_seni: {
         label: 'Seni & Kreatif',
