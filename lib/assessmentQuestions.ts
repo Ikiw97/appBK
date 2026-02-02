@@ -45,7 +45,7 @@ export const SMA_SMK_JURUSAN: JurusanCategory[] = [
   { id: 'smk_bisnis', name: 'Bisnis & Manajemen', type: 'SMK', label: 'SMK - Bisnis dan Manajemen' },
   { id: 'smk_kesehatan', name: 'Kesehatan', type: 'SMK', label: 'SMK - Kesehatan dan Pekerjaan Sosial' },
   { id: 'smk_pariwisata', name: 'Pariwisata', type: 'SMK', label: 'SMK - Pariwisata' },
-  { id: 'smk_agribisnis', name: 'Agribisnis', type: 'SMK', label: 'SMK - Agribisnis & Agroteknologi' },
+  { id: 'smk_agribisnis', name: 'Agrobisnis', type: 'SMK', label: 'SMK - Agrobisnis & Agroteknologi' },
   { id: 'smk_seni', name: 'Seni & Kreatif', type: 'SMK', label: 'SMK - Seni dan Industri Kreatif' },
 ];
 
