@@ -30,10 +30,18 @@ export async function getAllSiswaData(): Promise<Record<string, SiswaAbsensi[]>>
   return {};
 }
 
-// Get students by class (now async)
+// Get students by class (Optimized)
 export async function getSiswaByKelas(kelas: string): Promise<SiswaAbsensi[]> {
-  const allData = await getAllSiswaData();
-  return allData[kelas] || [];
+  try {
+    const response = await fetch(`/api/students/get-all?class_id=${encodeURIComponent(kelas)}`);
+    const result = await response.json();
+    if (result.success && result.data) {
+      return result.data[kelas] || [];
+    }
+  } catch (error) {
+    console.error(`Error fetching students for class ${kelas}:`, error);
+  }
+  return [];
 }
 
 // Add new student via API
