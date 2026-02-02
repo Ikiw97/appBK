@@ -21,34 +21,42 @@ export default function SociometryResults({ sessionId, onBack }: SociometryResul
 
     const loadData = async () => {
         setLoading(true);
-        const sessions = await getSociometrySessions();
-        const currentSession = sessions.find(s => s.id === sessionId);
-        setSession(currentSession || null);
+        try {
+            // Fetch sessions first to get the context
+            const sessions = await getSociometrySessions();
+            const currentSession = sessions.find(s => s.id === sessionId);
+            setSession(currentSession || null);
 
-        if (currentSession) {
-            const resp = await getSociometryResponses(sessionId);
-            setResponses(resp);
+            if (currentSession) {
+                // Execute heavy fetches in parallel
+                const [resp, studentsResponse] = await Promise.all([
+                    getSociometryResponses(sessionId),
+                    // Optimization: Fetch only students for this class
+                    fetch(`/api/students/get-all?class_id=${encodeURIComponent(currentSession.class_id)}`)
+                ]);
 
-            // Fetch student master data for name mapping
-            try {
-                const studentsResponse = await fetch('/api/students/get-all');
-                const studentsResult = await studentsResponse.json();
+                setResponses(resp);
 
-                const classStudents = studentsResult.success && studentsResult.data
-                    ? (studentsResult.data[currentSession.class_id] || [])
-                    : [];
+                let classStudents: any[] = [];
+                try {
+                    const studentsResult = await studentsResponse.json();
+                    classStudents = studentsResult.success && studentsResult.data
+                        ? (studentsResult.data[currentSession.class_id] || [])
+                        : [];
+                } catch (err) {
+                    console.error('Failed to parse student data:', err);
+                }
 
                 // Calculate with student data
+                // Use a timeout to not block the main thread if calculation is heavy (optional but good practice)
                 const calculated = analyzeSociometry(resp, classStudents);
                 setAnalysis(calculated);
-            } catch (err) {
-                console.error('Failed to load student data:', err);
-                // Fallback to analysis without student data
-                const calculated = analyzeSociometry(resp, []);
-                setAnalysis(calculated);
             }
+        } catch (error) {
+            console.error("Error loading sociometry data:", error);
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     if (loading) return <div className="p-10 text-center text-slate-500">Memuat analisis...</div>;
