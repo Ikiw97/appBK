@@ -101,13 +101,17 @@ export default function QuestionEditor({ onBack, assessmentType }: QuestionEdito
         label: c.label,
       }));
     } else if (assessmentType === 'akpd') {
-      // For AKPD, derive categories from loaded questions
       const uniqueCategories = Array.from(new Set(questions.map(q => q.category)));
       return uniqueCategories.map(cat => ({
         id: cat,
         name: cat,
         label: cat
       }));
+    } else if (assessmentType === 'sma_smk') {
+      return [
+        { id: 'Minat Akademik (SMA)', name: 'Minat Akademik (SMA)', label: 'Minat Akademik (SMA)' },
+        { id: 'Minat Vokasi (SMK)', name: 'Minat Vokasi (SMK)', label: 'Minat Vokasi (SMK)' }
+      ];
     } else {
       // Dynamic categories from questions
       const uniqueCategories = Array.from(new Set(questions.map(q => q.category)));
@@ -370,6 +374,21 @@ export default function QuestionEditor({ onBack, assessmentType }: QuestionEdito
                   <Plus size={18} />
                   Tambah Soal
                 </button>
+                
+                {questions.length > 0 && (
+                  <button
+                    onClick={() => {
+                      if (confirm('Apakah Anda yakin ingin MENGHAPUS SEMUA pertanyaan? Tindakan ini tidak dapat dibatalkan.')) {
+                        setQuestions([]);
+                        setSaved(false); // Mark as unsaved
+                      }
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors font-medium text-sm shadow-sm border border-red-200"
+                  >
+                    <Trash2 size={18} />
+                    Hapus Semua
+                  </button>
+                )}
             </div>
           </div>
         </div>
