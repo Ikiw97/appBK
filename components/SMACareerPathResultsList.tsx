@@ -111,7 +111,7 @@ export default function SMACareerPathResultsList({ onBack }: SMACareerPathResult
             'smk_bisnis': 'SMK Bisnis',
             'smk_kesehatan': 'SMK Kesehatan',
             'smk_pariwisata': 'SMK Pariwisata',
-            'smk_agribisnis': 'SMK Agribisnis',
+            'smk_agribisnis': 'SMK Agrobisnis',
             'smk_seni': 'SMK Seni',
         };
         return map[pathCode] || pathCode;
