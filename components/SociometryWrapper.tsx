@@ -258,11 +258,19 @@ export default function SociometryWrapper({ schoolMode = 'smp' }: SociometryWrap
             )}
 
             {view === 'fill' && selectedSessionId && (
-                <SociometryStudentForm sessionId={selectedSessionId} onBack={handleBack} />
+                <SociometryStudentForm
+                    sessionId={selectedSessionId}
+                    sessionData={sessions.find(s => s.id === selectedSessionId)}
+                    onBack={handleBack}
+                />
             )}
 
             {view === 'results' && selectedSessionId && (
-                <SociometryResults sessionId={selectedSessionId} onBack={handleBack} />
+                <SociometryResults
+                    sessionId={selectedSessionId}
+                    sessionData={sessions.find(s => s.id === selectedSessionId)}
+                    onBack={handleBack}
+                />
             )}
         </div>
     );
