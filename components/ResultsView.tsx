@@ -55,35 +55,26 @@ export default function ResultsView() {
   const loadStats = async () => {
     setLoading(true);
     try {
-      const assessmentIds = Object.keys(ASSESSMENT_TITLES);
+      const response = await fetch('/api/assessments/stats');
+      const result = await response.json();
 
-      // Fetch all assessment results in parallel for better performance
-      const allResults = await Promise.all(
-        assessmentIds.map(id => getAssessmentResults(id).catch(err => {
-          console.warn(`Failed to load results for ${id}:`, err);
-          return [];
-        }))
-      );
+      if (result.success && result.data) {
+        const aggregatedData = result.data;
+        const assessmentIds = Object.keys(ASSESSMENT_TITLES);
 
-      const allStats: AssessmentStats[] = assessmentIds.map((assessmentId, index) => {
-        const results = allResults[index];
-        const completionsByClass: Record<string, number> = {};
-
-        results.forEach((result) => {
-          const cls = result.class || 'Unknown';
-          completionsByClass[cls] = (completionsByClass[cls] || 0) + 1;
+        const allStats: AssessmentStats[] = assessmentIds.map(id => {
+          const fetchedStat = aggregatedData[id];
+          return {
+            assessment_id: id,
+            totalCompletions: fetchedStat?.total || 0,
+            completionsByClass: fetchedStat?.byClass || {},
+          };
         });
 
-        return {
-          assessment_id: assessmentId,
-          totalCompletions: results.length,
-          completionsByClass,
-        };
-      });
-
-      setStats(allStats);
+        setStats(allStats);
+      }
     } catch (error) {
-      console.error('Error loading stats:', error);
+      console.error('Error loading aggregated stats:', error);
     } finally {
       setLoading(false);
     }
