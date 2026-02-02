@@ -12,11 +12,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     try {
-        const { data, error } = await supabase
+        let query = supabase
             .from('students')
             .select('*')
             .order('kelas', { ascending: true })
             .order('nama', { ascending: true });
+
+        // Optimization: Filter by class if provided
+        if (req.query.class_id) {
+            query = query.eq('kelas', req.query.class_id);
+        }
+
+        const { data, error } = await query;
 
         if (error) {
             throw error;
