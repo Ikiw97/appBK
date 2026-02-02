@@ -16,12 +16,13 @@ const generateId = () => {
 
 interface SociometryStudentFormProps {
     sessionId: string;
+    sessionData?: SociometrySession;
     onBack: () => void;
 }
 
-export default function SociometryStudentForm({ sessionId, onBack }: SociometryStudentFormProps) {
+export default function SociometryStudentForm({ sessionId, sessionData, onBack }: SociometryStudentFormProps) {
     const { user } = useAuth();
-    const [session, setSession] = useState<SociometrySession | null>(null);
+    const [session, setSession] = useState<SociometrySession | null>(sessionData || null);
     const [students, setStudents] = useState<SiswaAbsensi[]>([]);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
@@ -41,9 +42,14 @@ export default function SociometryStudentForm({ sessionId, onBack }: SociometryS
     const loadData = async () => {
         setLoading(true);
         try {
-            // 1. Load Session (via API/DB)
-            const sessions = await getSociometrySessions();
-            const currentSession = sessions.find(s => s.id === sessionId);
+            // 1. Load Session (via Props or API/DB)
+            let currentSession = sessionData;
+
+            if (!currentSession) {
+                const sessions = await getSociometrySessions();
+                currentSession = sessions.find(s => s.id === sessionId);
+            }
+
             setSession(currentSession || null);
 
             if (currentSession) {
