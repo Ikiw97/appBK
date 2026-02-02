@@ -5,11 +5,12 @@ import { getSociometrySessions, getSociometryResponses, SociometrySession, Socio
 
 interface SociometryResultsProps {
     sessionId: string;
+    sessionData?: SociometrySession;
     onBack: () => void;
 }
 
-export default function SociometryResults({ sessionId, onBack }: SociometryResultsProps) {
-    const [session, setSession] = useState<SociometrySession | null>(null);
+export default function SociometryResults({ sessionId, sessionData, onBack }: SociometryResultsProps) {
+    const [session, setSession] = useState<SociometrySession | null>(sessionData || null);
     const [responses, setResponses] = useState<SociometryResponse[]>([]);
     const [loading, setLoading] = useState(true);
     const [viewMode, setViewMode] = useState<'ranking' | 'matrix'>('ranking');
@@ -22,9 +23,14 @@ export default function SociometryResults({ sessionId, onBack }: SociometryResul
     const loadData = async () => {
         setLoading(true);
         try {
-            // Fetch sessions first to get the context
-            const sessions = await getSociometrySessions();
-            const currentSession = sessions.find(s => s.id === sessionId);
+            // Use passed session data if available, otherwise fetch
+            let currentSession = sessionData;
+
+            if (!currentSession) {
+                const sessions = await getSociometrySessions();
+                currentSession = sessions.find(s => s.id === sessionId);
+            }
+
             setSession(currentSession || null);
 
             if (currentSession) {
