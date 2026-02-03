@@ -44,7 +44,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const initializeAuth = async () => {
       try {
-        console.log('🔄 Initializing auth...');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('🔄 Initializing auth...');
+        }
 
         // Retrieve session with a timeout safety to prevent infinite loading (increased to 20s)
         const sessionPromise = supabase.auth.getSession();
@@ -58,7 +60,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (sessionError) throw sessionError;
 
         if (session?.user) {
-          console.log('✅ Session found, loading profile...');
+          if (process.env.NODE_ENV === 'development') {
+            console.log('✅ Session found, loading profile...');
+          }
           // Also wrap profile loading in a timeout race (separate 5s)
           try {
             await Promise.race([
