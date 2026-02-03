@@ -139,10 +139,27 @@ export const DEFAULT_SETTINGS: FeatureSettings = {
 // Storage key for admin settings
 const SETTINGS_STORAGE_KEY = 'bk_admin_settings';
 
-// Get current feature settings from API
-export async function getFeatureSettings(): Promise<FeatureSettings> {
+// In-memory cache to prevent redundant API calls
+let settingsCache: FeatureSettings | null = null;
+let cacheTimestamp: number = 0;
+const CACHE_DURATION_MS = 30000; // 30 seconds cache
+
+// Force refresh settings (bypasses cache)
+export function invalidateSettingsCache(): void {
+  settingsCache = null;
+  cacheTimestamp = 0;
+}
+
+// Get current feature settings from API (with caching)
+export async function getFeatureSettings(forceRefresh = false): Promise<FeatureSettings> {
   if (typeof window === 'undefined') {
     return DEFAULT_SETTINGS;
+  }
+
+  // Return cached settings if still valid and not forcing refresh
+  const now = Date.now();
+  if (!forceRefresh && settingsCache && (now - cacheTimestamp) < CACHE_DURATION_MS) {
+    return settingsCache;
   }
 
   try {
@@ -223,7 +240,15 @@ export async function getFeatureSettings(): Promise<FeatureSettings> {
           counseling_chat: data.services?.counseling_chat ?? DEFAULT_SETTINGS.services.counseling_chat,
         },
       };
-      console.log('✅ Loaded settings from API:', mergedSettings);
+      
+      // Cache the result
+      settingsCache = mergedSettings;
+      cacheTimestamp = Date.now();
+      
+      // Only log in development
+      if (process.env.NODE_ENV === 'development') {
+        console.log('✅ Settings loaded from API');
+      }
       return mergedSettings;
     } else {
       console.log('⚠️ No settings found, using DEFAULT_SETTINGS');
