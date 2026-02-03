@@ -24,9 +24,8 @@ export const FeatureSettingsProvider: React.FC<{ children: React.ReactNode }> = 
       // Don't set loading to true here to avoid flickering if re-fetching
       const loaded = await getFeatureSettings();
       setSettings(loaded);
-      console.log('🎯 FeatureSettingsProvider loaded:', loaded);
     } catch (error) {
-      console.error('❌ Error loading settings in FeatureSettingsProvider:', error);
+      console.error('❌ Error loading settings:', error);
       setSettings(DEFAULT_SETTINGS);
     } finally {
       setLoading(false);
@@ -39,7 +38,6 @@ export const FeatureSettingsProvider: React.FC<{ children: React.ReactNode }> = 
 
     // Listen for settings changes from AdminSettings
     const handleSettingsChange = () => {
-      console.log('🔄 Settings change detected, reloading...');
       loadSettings();
     };
 
