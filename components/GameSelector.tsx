@@ -18,17 +18,6 @@ export default function GameSelector({ }: GameSelectorProps) {
   const { settings, loading: settingsLoading } = useFeatureSettings();
   const [selectedGame, setSelectedGame] = useState<GameType>('select');
 
-  // Debug logging
-  console.log('🎮 [GameSelector] Render:', {
-    userRole: user?.role,
-    settingsLoaded: !!settings,
-    gamesEnabled: {
-      vocabulary: settings?.games?.vocabulary,
-      puzzle: settings?.games?.puzzle,
-      kahoot: settings?.games?.kahoot,
-    },
-  });
-
   const handleBackToSelector = () => {
     setSelectedGame('select');
   };
