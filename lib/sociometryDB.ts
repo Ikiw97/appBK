@@ -28,12 +28,27 @@ export interface SociometryResponse {
 const SOC_SESSIONS_KEY = 'sociometry_sessions';
 const SOC_RESPONSES_KEY = 'sociometry_responses';
 
-// Helper to get sessions
-export const getSociometrySessions = async (): Promise<SociometrySession[]> => {
+// In-memory cache for sessions
+let sessionsCache: SociometrySession[] | null = null;
+let sessionsCacheTime: number = 0;
+const SESSION_CACHE_DURATION = 30000; // 30 seconds
+
+// Force cache invalidation
+export function invalidateSessionsCache(): void {
+  sessionsCache = null;
+  sessionsCacheTime = 0;
+}
+
+// Helper to get sessions (with caching)
+export const getSociometrySessions = async (forceRefresh = false): Promise<SociometrySession[]> => {
+  // Return cached if valid
+  const now = Date.now();
+  if (!forceRefresh && sessionsCache && (now - sessionsCacheTime) < SESSION_CACHE_DURATION) {
+    return sessionsCache;
+  }
+
   // Use server-side API to bypass CORS issues for students (anon role)
   try {
-    console.log('Fetching sessions from API...');
-
     const response = await fetch('/api/sociometry/get-sessions');
     const result = await response.json();
 
@@ -43,8 +58,9 @@ export const getSociometrySessions = async (): Promise<SociometrySession[]> => {
     }
 
     if (result.data) {
-      console.log('API Data:', result.data);
-      return result.data as SociometrySession[];
+      sessionsCache = result.data as SociometrySession[];
+      sessionsCacheTime = Date.now();
+      return sessionsCache;
     }
   } catch (err) {
     console.warn('API fetch failed, falling back to local storage', err);
@@ -52,7 +68,6 @@ export const getSociometrySessions = async (): Promise<SociometrySession[]> => {
 
   // Fallback to local storage
   if (typeof window === 'undefined') return [];
-  console.log('Falling back to Local Storage for sessions');
   const localData = localStorage.getItem(SOC_SESSIONS_KEY);
   return localData ? JSON.parse(localData) : [];
 };
@@ -87,12 +102,19 @@ export const deleteSociometrySession = async (id: string): Promise<boolean> => {
   return true;
 };
 
-// Helper to get responses
-export const getSociometryResponses = async (sessionId: string): Promise<SociometryResponse[]> => {
+// Helper to get responses (with caching per session)
+const responsesCache: Record<string, { data: SociometryResponse[], time: number }> = {};
+
+export const getSociometryResponses = async (sessionId: string, forceRefresh = false): Promise<SociometryResponse[]> => {
+  // Return cached if valid
+  const now = Date.now();
+  const cached = responsesCache[sessionId];
+  if (!forceRefresh && cached && (now - cached.time) < SESSION_CACHE_DURATION) {
+    return cached.data;
+  }
+
   // Use server-side API to bypass CORS issues
   try {
-    console.log('Fetching responses from API for session:', sessionId);
-
     const response = await fetch(`/api/sociometry/get-responses?session_id=${sessionId}`);
     const result = await response.json();
 
@@ -101,8 +123,9 @@ export const getSociometryResponses = async (sessionId: string): Promise<Sociome
       throw new Error(result.error);
     }
 
-    console.log(`API returned ${result.data?.length || 0} responses`);
-    return result.data as SociometryResponse[];
+    const data = result.data as SociometryResponse[];
+    responsesCache[sessionId] = { data, time: Date.now() };
+    return data;
   } catch (err) {
     console.warn('API fetch failed, falling back to local storage', err);
   }
