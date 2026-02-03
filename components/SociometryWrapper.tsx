@@ -20,16 +20,15 @@ export default function SociometryWrapper({ schoolMode = 'smp' }: SociometryWrap
     const [sessions, setSessions] = useState<SociometrySession[]>([]);
     const [loading, setLoading] = useState(false);
 
-    // Load sessions
+    // Load sessions on mount only
     useEffect(() => {
         loadSessions();
-    }, [user]);
+    }, []); // Empty dependency - only run on mount
 
-    const loadSessions = async () => {
+    const loadSessions = async (forceRefresh = false) => {
         setLoading(true);
         try {
-            const data = await getSociometrySessions();
-            console.log('Wrapper received sessions:', data);
+            const data = await getSociometrySessions(forceRefresh);
             setSessions(data);
         } catch (e) {
             console.error(e);
@@ -45,7 +44,7 @@ export default function SociometryWrapper({ schoolMode = 'smp' }: SociometryWrap
     const handleBack = () => {
         setView('list');
         setSelectedSessionId(null);
-        loadSessions(); // Reload list
+        loadSessions(true); // Force reload list
     };
 
     const handleViewResults = (id: string) => {
@@ -162,7 +161,7 @@ export default function SociometryWrapper({ schoolMode = 'smp' }: SociometryWrap
 
                     <div className="flex gap-3 justify-center">
                         <button
-                            onClick={loadSessions}
+                            onClick={() => loadSessions(true)}
                             className="flex items-center gap-2 px-5 py-2.5 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition-colors font-medium"
                         >
                             <RefreshCw size={16} />
