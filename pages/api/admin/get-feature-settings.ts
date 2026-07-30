@@ -46,7 +46,7 @@ export default async function handler(
     if (data && data.settings) {
       // Merge fetched settings with defaults to ensure all fields exist
       // Merge fetched settings
-      const mergedSettings: FeatureSettings = {
+      const mergedSettings: any = {
         assessments: {
           akpd: data.settings.assessments?.akpd ?? DEFAULT_SETTINGS.assessments.akpd,
           aum: data.settings.assessments?.aum ?? DEFAULT_SETTINGS.assessments.aum,
@@ -86,7 +86,7 @@ export default async function handler(
           schoolName: data.settings.system?.schoolName ?? DEFAULT_SETTINGS.system.schoolName,
           adminEmail: data.settings.system?.adminEmail ?? DEFAULT_SETTINGS.system.adminEmail,
           themeColor: data.settings.system?.themeColor ?? DEFAULT_SETTINGS.system.themeColor,
-          schoolMode: data.settings.system?.schoolMode ?? DEFAULT_SETTINGS.system.schoolMode,
+          schoolMode: data.settings.system?.schoolMode ?? (DEFAULT_SETTINGS as any).system?.schoolMode ?? 'smp',
         },
         studentManagement: {
           studentEnrollment: data.settings.studentManagement?.studentEnrollment ?? DEFAULT_SETTINGS.studentManagement.studentEnrollment,
