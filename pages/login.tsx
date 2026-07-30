@@ -4,6 +4,7 @@ import { useAuth } from '@/lib/authContextSupabase';
 import { getDaftarKelas, SiswaAbsensi } from '@/lib/absensiTypes';
 import { SchoolMode, filterAndSortClasses } from '@/lib/classHelper';
 import { getSiswaByKelas, getAllSiswaData } from '@/lib/siswaStorage';
+import { getFeatureSettings } from '@/lib/featureSettings';
 import { LogIn, BookOpen, AlertCircle, Eye, EyeOff, ChevronDown } from 'lucide-react';
 
 type LoginMode = 'selection' | 'teacher' | 'student';
@@ -22,9 +23,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
 
   // Student login state
-  // Baca schoolMode langsung dari localStorage saat inisialisasi, bukan via useEffect
-  // agar daftar kelas langsung muncul sesuai setting admin tanpa delay
-  const [schoolMode] = useState<SchoolMode>(() => {
+  const [schoolMode, setSchoolMode] = useState<SchoolMode>(() => {
     if (typeof window !== 'undefined') {
       return (localStorage.getItem('schoolMode') as SchoolMode) || 'sd';
     }
@@ -35,6 +34,22 @@ export default function LoginPage() {
   const [selectedStudentId, setSelectedStudentId] = useState('');
   const [loadingStudents, setLoadingStudents] = useState(false);
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
+
+  // Fetch schoolMode from database settings on mount
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const settings = await getFeatureSettings(true); // forceRefresh
+        if (settings?.system?.schoolMode) {
+          setSchoolMode(settings.system.schoolMode);
+          localStorage.setItem('schoolMode', settings.system.schoolMode);
+        }
+      } catch (err) {
+        console.error('Error fetching schoolMode settings:', err);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   useEffect(() => {
     const loadClasses = async () => {
