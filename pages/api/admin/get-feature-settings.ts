@@ -1,6 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { supabase } from '@/lib/supabaseClient';
+import { createClient } from '@supabase/supabase-js';
 import { FeatureSettings, DEFAULT_SETTINGS } from '@/lib/featureSettings';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+
+// Use service role to bypass RLS and allow reading settings publicly
+const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
 type ResponseData = {
   success: boolean;
@@ -23,7 +29,7 @@ export default async function handler(
     // This ensures admin/super_admin users can always access games
     // Individual students can have restrictions applied via user_profiles
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('feature_settings')
       .select('id, settings')
       .limit(1)
@@ -80,6 +86,7 @@ export default async function handler(
           schoolName: data.settings.system?.schoolName ?? DEFAULT_SETTINGS.system.schoolName,
           adminEmail: data.settings.system?.adminEmail ?? DEFAULT_SETTINGS.system.adminEmail,
           themeColor: data.settings.system?.themeColor ?? DEFAULT_SETTINGS.system.themeColor,
+          schoolMode: data.settings.system?.schoolMode ?? DEFAULT_SETTINGS.system.schoolMode,
         },
         studentManagement: {
           studentEnrollment: data.settings.studentManagement?.studentEnrollment ?? DEFAULT_SETTINGS.studentManagement.studentEnrollment,
