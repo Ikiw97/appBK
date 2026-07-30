@@ -4,7 +4,6 @@ import { useAuth } from '@/lib/authContextSupabase';
 import { getDaftarKelas, SiswaAbsensi } from '@/lib/absensiTypes';
 import { SchoolMode, filterAndSortClasses } from '@/lib/classHelper';
 import { getSiswaByKelas, getAllSiswaData } from '@/lib/siswaStorage';
-import { getFeatureSettings } from '@/lib/featureSettings';
 import { LogIn, BookOpen, AlertCircle, Eye, EyeOff, ChevronDown } from 'lucide-react';
 
 type LoginMode = 'selection' | 'teacher' | 'student';
@@ -35,20 +34,29 @@ export default function LoginPage() {
   const [loadingStudents, setLoadingStudents] = useState(false);
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
 
-  // Fetch schoolMode from database settings on mount
+  // Fetch schoolMode langsung dari API database (bypass cache) saat halaman login dibuka
   useEffect(() => {
-    const fetchSettings = async () => {
+    const fetchSchoolMode = async () => {
       try {
-        const settings = await getFeatureSettings(true); // forceRefresh
-        if ((settings as any)?.system?.schoolMode) {
-          setSchoolMode((settings as any).system.schoolMode);
-          localStorage.setItem('schoolMode', (settings as any).system.schoolMode);
+        const response = await fetch(`/api/admin/get-feature-settings?t=${Date.now()}`, {
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+          }
+        });
+        if (response.ok) {
+          const { success, data } = await response.json();
+          const mode = data?.system?.schoolMode;
+          if (success && mode && ['sd', 'smp', 'sma_smk'].includes(mode)) {
+            setSchoolMode(mode as SchoolMode);
+            localStorage.setItem('schoolMode', mode);
+          }
         }
       } catch (err) {
-        console.error('Error fetching schoolMode settings:', err);
+        console.error('Error fetching schoolMode from API:', err);
       }
     };
-    fetchSettings();
+    fetchSchoolMode();
   }, []);
 
   useEffect(() => {
