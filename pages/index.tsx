@@ -138,9 +138,39 @@ export default function Home({
     }
   }, [user]);
 
-  const handleSetSchoolMode = (mode: SchoolMode) => {
+  // Sync schoolMode state with loaded feature settings from database
+  useEffect(() => {
+    if (featureSettings?.system?.schoolMode) {
+      setSchoolMode(featureSettings.system.schoolMode);
+      localStorage.setItem('schoolMode', featureSettings.system.schoolMode);
+    }
+  }, [featureSettings]);
+
+  const handleSetSchoolMode = async (mode: SchoolMode) => {
     setSchoolMode(mode);
     localStorage.setItem('schoolMode', mode);
+
+    // Save to feature settings database if settings are loaded
+    if (featureSettings) {
+      const updatedSettings = {
+        ...featureSettings,
+        system: {
+          ...featureSettings.system,
+          schoolMode: mode
+        }
+      };
+      try {
+        const success = await saveFeatureSettings(updatedSettings);
+        if (success) {
+          // Notify the context to reload settings
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('settingsChanged'));
+          }
+        }
+      } catch (err) {
+        console.error('Error saving school mode settings to database:', err);
+      }
+    }
   };
 
   const handleSetCurrentPage = (page: string) => {
@@ -741,7 +771,7 @@ export default function Home({
             </button>
           </div>
         </div>
-        <StudentDashboard setCurrentPage={handleSetCurrentPage} setCurrentSubpage={handleSetCurrentSubpage} />
+        <StudentDashboard setCurrentPage={handleSetCurrentPage} setCurrentSubpage={handleSetCurrentSubpage} schoolMode={schoolMode} />
       </div>
     );
   }
@@ -752,6 +782,7 @@ export default function Home({
       <StudentDashboard
         setCurrentPage={handleSetCurrentPage}
         setCurrentSubpage={setCurrentSubpage}
+        schoolMode={schoolMode}
       />
     );
   }
