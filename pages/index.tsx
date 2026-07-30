@@ -150,26 +150,21 @@ export default function Home({
     setSchoolMode(mode);
     localStorage.setItem('schoolMode', mode);
 
-    // Save to feature settings database if settings are loaded
-    if (featureSettings) {
-      const updatedSettings = {
-        ...featureSettings,
-        system: {
-          ...(featureSettings as any).system,
-          schoolMode: mode
-        }
-      };
-      try {
-        const success = await saveFeatureSettings(updatedSettings);
-        if (success) {
-          // Notify the context to reload settings
-          if (typeof window !== 'undefined') {
-            window.dispatchEvent(new CustomEvent('settingsChanged'));
-          }
-        }
-      } catch (err) {
-        console.error('Error saving school mode settings to database:', err);
+    // Simpan ke database via API khusus schoolMode
+    try {
+      const response = await fetch('/api/admin/save-school-mode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ schoolMode: mode }),
+      });
+      const result = await response.json();
+      if (result.success) {
+        console.log(`✅ schoolMode "${mode}" berhasil disimpan ke database`);
+      } else {
+        console.error('❌ Gagal simpan schoolMode:', result.error);
       }
+    } catch (err) {
+      console.error('❌ Error menyimpan schoolMode ke database:', err);
     }
   };
 
