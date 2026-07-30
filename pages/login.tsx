@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/lib/authContextSupabase';
 import { getDaftarKelas, SiswaAbsensi } from '@/lib/absensiTypes';
-import { SchoolMode } from '@/lib/classHelper';
+import { SchoolMode, filterAndSortClasses } from '@/lib/classHelper';
 import { getSiswaByKelas, getAllSiswaData } from '@/lib/siswaStorage';
 import { LogIn, BookOpen, AlertCircle, Eye, EyeOff, ChevronDown } from 'lucide-react';
 
@@ -43,9 +43,9 @@ export default function LoginPage() {
         const allData = await getAllSiswaData();
         const dbClasses = Object.keys(allData);
         const combined = Array.from(new Set([...standardClasses, ...dbClasses]));
-        setAvailableClasses(combined);
+        setAvailableClasses(filterAndSortClasses(combined, schoolMode));
       } catch (err) {
-        setAvailableClasses(standardClasses);
+        setAvailableClasses(filterAndSortClasses(standardClasses, schoolMode));
       }
     };
     loadClasses();
