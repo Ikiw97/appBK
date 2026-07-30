@@ -140,9 +140,9 @@ export default function Home({
 
   // Sync schoolMode state with loaded feature settings from database
   useEffect(() => {
-    if (featureSettings?.system?.schoolMode) {
-      setSchoolMode(featureSettings.system.schoolMode);
-      localStorage.setItem('schoolMode', featureSettings.system.schoolMode);
+    if ((featureSettings as any)?.system?.schoolMode) {
+      setSchoolMode((featureSettings as any).system.schoolMode);
+      localStorage.setItem('schoolMode', (featureSettings as any).system.schoolMode);
     }
   }, [featureSettings]);
 
@@ -155,7 +155,7 @@ export default function Home({
       const updatedSettings = {
         ...featureSettings,
         system: {
-          ...featureSettings.system,
+          ...(featureSettings as any).system,
           schoolMode: mode
         }
       };
