@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/lib/authContextSupabase';
 import { getDaftarKelas, SiswaAbsensi } from '@/lib/absensiTypes';
-import { getSiswaByKelas } from '@/lib/siswaStorage';
+import { SchoolMode } from '@/lib/classHelper';
+import { getSiswaByKelas, getAllSiswaData } from '@/lib/siswaStorage';
 import { LogIn, BookOpen, AlertCircle, Eye, EyeOff, ChevronDown } from 'lucide-react';
 
 type LoginMode = 'selection' | 'teacher' | 'student';
@@ -21,11 +22,34 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
 
   // Student login state
+  const [schoolMode, setSchoolMode] = useState<SchoolMode>('smp');
   const [selectedKelas, setSelectedKelas] = useState('');
   const [studentsList, setStudentsList] = useState<SiswaAbsensi[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState('');
   const [loadingStudents, setLoadingStudents] = useState(false);
-  const daftarKelas = getDaftarKelas('smp'); // TODO: get from settings
+  const [availableClasses, setAvailableClasses] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const mode = (localStorage.getItem('schoolMode') as SchoolMode) || 'sd';
+      setSchoolMode(mode);
+    }
+  }, []);
+
+  useEffect(() => {
+    const loadClasses = async () => {
+      const standardClasses = getDaftarKelas(schoolMode);
+      try {
+        const allData = await getAllSiswaData();
+        const dbClasses = Object.keys(allData);
+        const combined = Array.from(new Set([...standardClasses, ...dbClasses]));
+        setAvailableClasses(combined);
+      } catch (err) {
+        setAvailableClasses(standardClasses);
+      }
+    };
+    loadClasses();
+  }, [schoolMode]);
 
   // Load students when class changes
   useEffect(() => {
@@ -397,7 +421,7 @@ export default function LoginPage() {
                     required
                   >
                     <option value="">-- Pilih Kelas --</option>
-                    {daftarKelas.map(kelas => (
+                    {availableClasses.map(kelas => (
                       <option key={kelas} value={kelas}>{kelas}</option>
                     ))}
                   </select>
