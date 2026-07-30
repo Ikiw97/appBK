@@ -1,6 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { supabase } from '@/lib/supabaseClient';
+import { createClient } from '@supabase/supabase-js';
 import { FeatureSettings } from '@/lib/featureSettings';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+
+// Use service role to bypass RLS and allow saving settings from server side
+const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
 type ResponseData = {
   success: boolean;
@@ -30,7 +36,7 @@ export default async function handler(
     console.log('💾 Saving feature settings to Supabase:', settings);
 
     // Try to update existing settings (there should only be one row)
-    const { data: existingData, error: fetchError } = await supabase
+    const { data: existingData, error: fetchError } = await supabaseAdmin
       .from('feature_settings')
       .select('id')
       .limit(1);
@@ -51,7 +57,7 @@ export default async function handler(
 
     if (existingData && existingData.length > 0) {
       // Update existing settings
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from('feature_settings')
         .update({
           settings: settings,
@@ -63,7 +69,7 @@ export default async function handler(
       response = { data, error };
     } else {
       // Insert new settings
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from('feature_settings')
         .insert([
           {
