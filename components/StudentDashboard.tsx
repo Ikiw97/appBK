@@ -2,13 +2,21 @@ import React, { useState } from 'react';
 import { BookOpen, Zap, Gamepad2, Lock } from 'lucide-react';
 import { useFeatureSettings } from '@/lib/useFeatureSettings';
 import { useAuth } from '@/lib/authContextSupabase';
+import type { SchoolMode } from '@/lib/classHelper';
 
 interface StudentDashboardProps {
   setCurrentPage?: (page: string) => void;
   setCurrentSubpage?: (subpage: string) => void;
+  schoolMode?: SchoolMode;
 }
 
-export default function StudentDashboard({ setCurrentPage, setCurrentSubpage }: StudentDashboardProps) {
+export default function StudentDashboard({ setCurrentPage, setCurrentSubpage, schoolMode }: StudentDashboardProps) {
+  // Jika schoolMode tidak diteruskan lewat props, baca dari localStorage
+  const effectiveSchoolMode: SchoolMode = schoolMode ?? (
+    typeof window !== 'undefined'
+      ? ((localStorage.getItem('schoolMode') as SchoolMode) || 'sd')
+      : 'sd'
+  );
   const { settings, loading } = useFeatureSettings();
   const { user } = useAuth();
 
