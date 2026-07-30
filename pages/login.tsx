@@ -22,19 +22,19 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
 
   // Student login state
-  const [schoolMode, setSchoolMode] = useState<SchoolMode>('smp');
+  // Baca schoolMode langsung dari localStorage saat inisialisasi, bukan via useEffect
+  // agar daftar kelas langsung muncul sesuai setting admin tanpa delay
+  const [schoolMode] = useState<SchoolMode>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('schoolMode') as SchoolMode) || 'sd';
+    }
+    return 'sd';
+  });
   const [selectedKelas, setSelectedKelas] = useState('');
   const [studentsList, setStudentsList] = useState<SiswaAbsensi[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState('');
   const [loadingStudents, setLoadingStudents] = useState(false);
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const mode = (localStorage.getItem('schoolMode') as SchoolMode) || 'sd';
-      setSchoolMode(mode);
-    }
-  }, []);
 
   useEffect(() => {
     const loadClasses = async () => {
