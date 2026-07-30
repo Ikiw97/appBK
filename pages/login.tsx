@@ -40,9 +40,9 @@ export default function LoginPage() {
     const fetchSettings = async () => {
       try {
         const settings = await getFeatureSettings(true); // forceRefresh
-        if (settings?.system?.schoolMode) {
-          setSchoolMode(settings.system.schoolMode);
-          localStorage.setItem('schoolMode', settings.system.schoolMode);
+        if ((settings as any)?.system?.schoolMode) {
+          setSchoolMode((settings as any).system.schoolMode);
+          localStorage.setItem('schoolMode', (settings as any).system.schoolMode);
         }
       } catch (err) {
         console.error('Error fetching schoolMode settings:', err);
