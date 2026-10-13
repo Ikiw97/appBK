@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import EmojiPicker from 'emoji-picker-react';
-import { Send, User, MessageCircle, Clock, Search, ArrowLeft, Check, CheckCheck, Trash2, Reply, X, Eye, EyeOff, Smile, Image as ImageIcon, Loader2, Download } from 'lucide-react';
+import { Send, User, MessageCircle, Clock, Search, ArrowLeft, Check, CheckCheck, Trash2, Reply, X, Eye, EyeOff, Smile, Image as ImageIcon, Loader2, Download, Bot } from 'lucide-react';
 import { useAuth } from '@/lib/authContextSupabase';
+import AiChatView from '@/components/AiChatView';
 import { supabase } from '@/lib/supabaseClient';
 
 // --- Types ---
@@ -57,6 +58,7 @@ function StudentChatView({ onBack }: { onBack?: () => void }) {
     const [session, setSession] = useState<ChatSession | null>(null);
     const [loading, setLoading] = useState(true);
     const [isAnonymousMode, setIsAnonymousMode] = useState(false); // Default to public
+    const [aiMode, setAiMode] = useState(false); // mode "Tanya AI"
 
     useEffect(() => {
         const fetchOrCreateSession = async () => {
@@ -108,6 +110,18 @@ function StudentChatView({ onBack }: { onBack?: () => void }) {
         fetchOrCreateSession();
     }, [user, isAnonymousMode]);
 
+    // Mode "Tanya AI" — chatbot edukatif (tanpa data pribadi)
+    if (aiMode) {
+        return (
+            <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full p-4">
+                <AiChatView
+                    onBack={() => setAiMode(false)}
+                    onKontakGuruBK={() => setAiMode(false)}
+                />
+            </div>
+        );
+    }
+
     if (loading) return <div className="flex justify-center p-10"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div></div>;
     if (!session) return <div className="p-8 text-center text-red-500">Gagal memuat sesi chat. Hubungi admin.</div>;
 
@@ -138,6 +152,22 @@ function StudentChatView({ onBack }: { onBack?: () => void }) {
                     </div>
 
                 </div>
+
+                {/* Tanya AI — chatbot edukatif */}
+                <button
+                    onClick={() => setAiMode(true)}
+                    className="mx-4 mt-3 mb-0 flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700 transition shadow-sm"
+                >
+                    <span className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+                        <Bot size={18} />
+                    </span>
+                    <span className="text-left flex-1 min-w-0">
+                        <span className="block text-sm font-semibold">Tanya Teman BK</span>
+                        <span className="block text-[11px] text-white/85">
+                            Tanya soal bullying, cara belajar, atau rasa gugup
+                        </span>
+                    </span>
+                </button>
 
                 {/* Anonymous Toggle */}
                 <div className="flex items-center gap-2 p-4 border-b border-slate-100 bg-white justify-end">
