@@ -225,7 +225,7 @@ export default function LoginPage() {
             {/* Info Box */}
             <div className="mt-6 bg-[#1e3a5f] rounded-xl p-4">
               <p className="text-white text-sm text-center">
-                💡 Guru BK: Gunakan akun Anda untuk memanajement kesiswaan
+                💡 Guru BK: Gunakan akun Anda untuk mengelola kesiswaan
               </p>
             </div>
           </div>
