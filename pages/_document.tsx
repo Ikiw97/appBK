@@ -10,6 +10,8 @@ export default function Document() {
         <meta name="theme-color" content="#3b82f6" />
         <link rel="apple-touch-icon" href="/icons/icons.png" />
         <link rel="icon" href="/icons/icons.png" />
+        {/* Default title - akan di-override per halaman */}
+        <title>Ruang BK - Bimbingan Konseling</title>
       </Head>
       <body>
         <Main />
